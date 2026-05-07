@@ -48,10 +48,11 @@ sudo apt install tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim
 ### 启动
 
 ```bash
-# 开发模式
-python main.py
+# 克隆后直接启动
+./hua-trans
 
-python main.py
+# 或手动
+python3 main.py
 ```
 
 ### 热键翻译
@@ -160,19 +161,16 @@ python main.py
 ## 开发
 
 ```bash
-# 安装开发依赖
+# 安装依赖
 pip install -r requirements.txt
 
 # 运行
-python main.py
+./hua-trans
 
 # 打包为独立可执行文件
 pip install pyinstaller
 python build.py
 # 输出: dist/黄花梨之译
-
-# 安装到系统
-sudo ./install.sh
 ```
 
 ## 项目结构

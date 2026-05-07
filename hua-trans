@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# 黄花梨之译 (Hua-Trans) — 启动脚本
+# 用法: ./hua-trans  或  安装后: hua-trans
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+exec python3 main.py

@@ -16,18 +16,18 @@ if [ -f "$DESKTOP_FILE" ]; then
     log "桌面启动器已移除"
 fi
 
-# 移除终端别名
-if [ -f "$HOME/.bashrc" ]; then
-    sed -i '/# 黄花梨之译/,/alias hua-trans/d' "$HOME/.bashrc"
-    log "终端别名已移除"
+# 移除启动命令
+WRAPPER="$HOME/.local/bin/hua-trans"
+if [ -f "$WRAPPER" ]; then
+    rm -f "$WRAPPER"
+    log "启动命令已移除 (hua-trans)"
 fi
 
-# 移除系统安装（如果存在）
-SYSTEM_INSTALL="/usr/local/bin/hua-trans"
-if [ -f "$SYSTEM_INSTALL" ]; then
-    warn "检测到系统安装。需要 root 权限移除:"
-    echo "  sudo rm -f /usr/local/bin/hua-trans"
-    echo "  sudo rm -f /usr/local/share/applications/hua-trans.desktop"
+# 清理 bashrc
+if [ -f "$HOME/.bashrc" ]; then
+    sed -i '/# 黄花梨之译/d' "$HOME/.bashrc" 2>/dev/null || true
+    sed -i '/hua-trans/d' "$HOME/.bashrc" 2>/dev/null || true
+    log "终端配置已清理"
 fi
 
 # 询问是否删除配置和数据
@@ -45,4 +45,3 @@ fi
 
 echo ""
 echo -e "${GREEN}卸载完成。${NC}"
-echo "安装目录未被删除（如需要手动清理）。"

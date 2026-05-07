@@ -104,7 +104,7 @@ Name=黄花梨之译
 Name[en]=Hua-Trans
 Comment=电子工程数据手册 PDF 翻译工具
 Comment[en]=EE Datasheet PDF Translation Tool
-Exec=python3 $PROJECT_DIR/main.py
+Exec=$HOME/.local/bin/hua-trans
 Icon=$PROJECT_DIR/resources/icon.png
 Terminal=false
 Type=Application
@@ -117,14 +117,19 @@ else
     info "桌面启动器已存在，跳过"
 fi
 
-# ── 创建启动别名 ──
-if ! grep -q "hua-trans" "$HOME/.bashrc" 2>/dev/null; then
-    cat >> "$HOME/.bashrc" << 'ALIASEOF'
+# ── 创建启动命令 ──
+BIN_DIR="$HOME/.local/bin"
+WRAPPER="$BIN_DIR/hua-trans"
+mkdir -p "$BIN_DIR"
+cp "$PROJECT_DIR/hua-trans" "$WRAPPER"
+log "启动命令已安装: hua-trans"
 
-# 黄花梨之译 (Hua-Trans)
-alias hua-trans='cd '"$PROJECT_DIR"' && python3 main.py'
-ALIASEOF
-    log "终端别名已添加 (hua-trans)"
+# Ensure ~/.local/bin is in PATH
+if ! echo "$PATH" | grep -q "$BIN_DIR"; then
+    if ! grep -q "$BIN_DIR" "$HOME/.bashrc" 2>/dev/null; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+        log "~/.local/bin 已添加到 PATH（重新打开终端生效）"
+    fi
 fi
 
 # ── 完成 ──
