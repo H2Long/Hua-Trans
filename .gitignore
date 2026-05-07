@@ -1,0 +1,28 @@
+# Build artifacts
+build/
+dist/
+*.spec
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# User data (generated at runtime)
+~/.translatetor/
+
+# Sensitive
+*.env
+*.key
+*.pem
+
+# Test artifacts
+*.log

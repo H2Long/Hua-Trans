@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=黄花梨之译
+Comment=数据手册翻译工具 - 面向电子信息专业学生
+Exec=/opt/黄花梨之译/黄花梨之译
+Icon=/opt/黄花梨之译/icon.png
+Terminal=false
+Type=Application
+Categories=Development;Education;Engineering;
+Keywords=translate;datasheet;electronics;engineering;翻译;数据手册;
