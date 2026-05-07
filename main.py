@@ -143,7 +143,8 @@ def main():
 
         main_win.get_settings_page().hotkey_changed.connect(on_hotkey_changed)
     else:
-        print("Warning: pynput not available. Hotkey disabled.")
+        print("Warning: python-xlib not available. Hotkey disabled.")
+        print("  Install: pip install python-xlib")
         main_win._sidebar.set_hotkey_status(False)
 
     # Show main window

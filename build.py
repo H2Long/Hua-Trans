@@ -19,7 +19,7 @@ PyInstaller.__main__.run([
     '--hidden-import=PyQt5.QtSvg',
     '--hidden-import=fitz',
     '--hidden-import=pytesseract',
-    '--hidden-import=pynput',
+    '--hidden-import=Xlib',
     '--hidden-import=pyperclip',
     '--hidden-import=PIL',
     '--hidden-import=requests',

@@ -51,8 +51,7 @@ sudo apt install tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim
 # 开发模式
 python main.py
 
-# 热键功能需要 sudo（pynput 全局热键监听）
-sudo python main.py
+python main.py
 ```
 
 ### 热键翻译
@@ -202,8 +201,9 @@ gui/                    # PyQt5 界面
 
 ### 热键不生效
 
-- 确保用 `sudo` 启动（pynput 需要 root 权限监听全局键盘事件）
+- 确认 `python-xlib` 已安装：`pip install python-xlib`
 - 检查快捷键是否与其他程序冲突
+- X11 环境下无需 root 权限
 
 ### OCR 不可用
 

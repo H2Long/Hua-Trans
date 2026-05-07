@@ -18,7 +18,7 @@ echo -e "${NC}"
 
 # ── 权限检查 ──
 if [ "$EUID" -eq 0 ]; then
-    warn "检测到 root 权限。建议用普通用户安装，热键功能单独 sudo 启动。"
+    warn "检测到 root 权限。Hua-Trans 使用 XGrabKey，普通用户即可使用热键。"
 fi
 
 # ── 系统依赖 ──
@@ -123,9 +123,8 @@ if ! grep -q "hua-trans" "$HOME/.bashrc" 2>/dev/null; then
 
 # 黄花梨之译 (Hua-Trans)
 alias hua-trans='cd '"$PROJECT_DIR"' && python3 main.py'
-alias hua-trans-sudo='cd '"$PROJECT_DIR"' && sudo python3 main.py'
 ALIASEOF
-    log "终端别名已添加 (hua-trans / hua-trans-sudo)"
+    log "终端别名已添加 (hua-trans)"
 fi
 
 # ── 完成 ──
@@ -139,9 +138,7 @@ echo "    1. 应用菜单搜索「黄花梨之译」"
 echo "    2. 终端: hua-trans"
 echo "    3. 手动: cd $PROJECT_DIR && python3 main.py"
 echo ""
-echo "  热键翻译需要 root 权限启动:"
-echo "    sudo python3 $PROJECT_DIR/main.py"
-echo "    或: hua-trans-sudo"
+echo "  热键无需 root 权限（使用 X11 XGrabKey）"
 echo ""
 echo "  配置: ~/.translatetor/config.json"
 echo "  术语: ~/.translatetor/terms.json"
