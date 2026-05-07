@@ -103,6 +103,7 @@ class HotkeyManager:
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
         self._running = False
+        self._display = None
         self._available = False
         try:
             from Xlib.display import Display
