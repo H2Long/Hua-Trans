@@ -15,7 +15,7 @@
 
 - **操作系统**：Linux（X11）
 - **Python**：3.10+
-- **依赖包**：PyQt5, PyMuPDF, pynput, pyperclip, Pillow, requests
+- **依赖包**：PyQt5, PyMuPDF, python-xlib, pyperclip, Pillow, requests
 - **可选**：Tesseract OCR（扫描件 OCR 需要）
 
 ## 快速安装
