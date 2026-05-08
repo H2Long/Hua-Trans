@@ -31,10 +31,10 @@ from gui.widgets.term_highlighter import TermHighlighter
 class TranslationWorker(QThread):
     """Background thread for translation."""
     finished = pyqtSignal(dict)
-    error = pyqtSignal(str)
+    error = pyqtSignal(str, int)
 
     def __init__(self, manager, text, engine=None, cache=None,
-                 source_lang="en", target_lang="zh"):
+                 source_lang="en", target_lang="zh", idx=None):
         super().__init__()
         self.manager = manager
         self.text = text
@@ -42,6 +42,7 @@ class TranslationWorker(QThread):
         self.cache = cache
         self.source_lang = source_lang
         self.target_lang = target_lang
+        self.idx = idx
 
     def run(self):
         try:
@@ -59,6 +60,7 @@ class TranslationWorker(QThread):
                         "engine": engine,
                         "terms_applied": [],
                         "from_cache": True,
+                        "_idx": self.idx,
                     })
                     return
 
@@ -67,6 +69,7 @@ class TranslationWorker(QThread):
             result = self.manager.translate(
                 self.text, self.engine, self.source_lang, self.target_lang,
             )
+            result["_idx"] = self.idx
             result["from_cache"] = False
 
             if self.isInterruptionRequested():
@@ -79,7 +82,7 @@ class TranslationWorker(QThread):
             self.finished.emit(result)
         except Exception as e:
             if not self.isInterruptionRequested():
-                self.error.emit(str(e))
+                self.error.emit(str(e), self.idx)
 
 
 class TranslationPage(QWidget):
@@ -1208,9 +1211,8 @@ class TranslationPage(QWidget):
         worker = TranslationWorker(
             self.translator, text, engine,
             self.cache if self.config.get("cache_enabled") else None,
-            src, tgt,
+            src, tgt, idx=idx,
         )
-        worker._idx = idx
         worker.finished.connect(self._on_segment_translated)
         worker.error.connect(self._on_segment_error)
         self._overlay_workers.append(worker)
@@ -1218,9 +1220,9 @@ class TranslationPage(QWidget):
         worker.start()
 
     def _on_segment_translated(self, result):
-        worker = self.sender()
-        idx = worker._idx
-        # Guard against stale workers from a cancelled previous run
+        idx = result.get("_idx")
+        if idx is None:
+            return
         if idx >= len(self._overlay_translations):
             return
         self._overlay_translations[idx] = result["translated"]
@@ -1230,17 +1232,18 @@ class TranslationPage(QWidget):
         self.status_message.emit(
             f"原位翻译中... ({done}/{self._overlay_total})"
         )
-        worker.wait()
-        self._overlay_workers.remove(worker)
+        worker = self.sender()
+        if worker is not None:
+            worker.wait()
+            self._overlay_workers.remove(worker)
         if not self._overlay_cancelled:
             stagger_ms = self.config.get("overlay_stagger_ms", 500)
             QTimer.singleShot(stagger_ms, self._start_overlay_worker)
         self._check_overlay_done()
 
-    def _on_segment_error(self, error):
-        worker = self.sender()
-        idx = worker._idx
-        # Guard against stale workers from a cancelled previous run
+    def _on_segment_error(self, error, idx):
+        if idx is None:
+            return
         if idx >= len(self._overlay_translations):
             return
         self._overlay_translations[idx] = self._overlay_en_texts[idx]
@@ -1250,8 +1253,10 @@ class TranslationPage(QWidget):
         self.status_message.emit(
             f"原位翻译中... ({done}/{self._overlay_total}) [1 段失败]"
         )
-        worker.wait()
-        self._overlay_workers.remove(worker)
+        worker = self.sender()
+        if worker is not None:
+            worker.wait()
+            self._overlay_workers.remove(worker)
         if not self._overlay_cancelled:
             stagger_ms = self.config.get("overlay_stagger_ms", 500)
             QTimer.singleShot(stagger_ms, self._start_overlay_worker)

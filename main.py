@@ -79,16 +79,61 @@ def _load_app_icon():
     )
 
 
+def _setup_desktop_integration():
+    """Create .desktop entry + icon so AppImage can be pinned to dock."""
+    appimage = os.environ.get("APPIMAGE")
+    if not appimage:
+        return
+
+    desktop_dir = os.path.expanduser("~/.local/share/applications")
+    desktop_file = os.path.join(desktop_dir, "hua-trans.desktop")
+
+    if os.path.exists(desktop_file):
+        with open(desktop_file, "r") as f:
+            if appimage in f.read():
+                return
+
+    os.makedirs(desktop_dir, exist_ok=True)
+
+    # Copy icon to system so it survives after AppImage temp dir cleanup
+    icon_dir = os.path.expanduser("~/.local/share/icons/hicolor/256x256/apps")
+    icon_file = os.path.join(icon_dir, "hua-trans.png")
+    icon_path = "hua-trans"
+    if not os.path.exists(icon_file):
+        base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+        src_icon = os.path.join(base, "resources", "icon.png")
+        if os.path.exists(src_icon):
+            os.makedirs(icon_dir, exist_ok=True)
+            import shutil
+            shutil.copy(src_icon, icon_file)
+            icon_path = icon_file
+    else:
+        icon_path = icon_file
+
+    with open(desktop_file, "w") as f:
+        f.write(
+            "[Desktop Entry]\n"
+            "Name=黄花梨之译\n"
+            "Name[en]=Hua-Trans\n"
+            "Comment=电子工程数据手册 PDF 翻译工具\n"
+            "Comment[en]=EE Datasheet PDF Translation Tool\n"
+            f"Exec={appimage}\n"
+            f"Icon={icon_path}\n"
+            "Terminal=false\n"
+            "Type=Application\n"
+            "Categories=Development;Education;Engineering;\n"
+            "StartupWMClass=hua-trans\n"
+        )
+
+
 def main():
     import signal as _signal
 
-    # Enable input method support (Linux X11 only)
-    if sys.platform == "linux":
-        os.environ.setdefault("QT_IM_MODULE", "ibus")
-        os.environ.setdefault("XMODIFIERS", "@im=ibus")
-
     # Handle Ctrl+C gracefully
     _signal.signal(_signal.SIGINT, lambda *_: QApplication.quit())
+
+    # Desktop integration: create .desktop entry so AppImage can be pinned to dock
+    _setup_desktop_integration()
 
     # Load config
     config = load_config()
