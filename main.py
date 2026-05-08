@@ -210,6 +210,8 @@ def main():
 
     def on_hotkey_result(result: dict):
         """Handle hotkey translation result in the main thread."""
+        log.info("Hotkey translate [%s]: %r -> %r",
+                 result["engine"], result["original"][:80], result["translated"][:80])
         floating.show_translation(
             result["original"], result["translated"],
             result["engine"], result.get("terms_applied"),

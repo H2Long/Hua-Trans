@@ -1,5 +1,7 @@
 """Translation page — PDF reader + translation engine."""
 
+import logging
+
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
     QTextEdit, QListWidget, QListWidgetItem, QLabel, QPushButton,
@@ -8,6 +10,8 @@ from PyQt5.QtWidgets import (
     QLineEdit,
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QTimer
+
+log = logging.getLogger("hua-trans")
 from PyQt5.QtGui import QFont, QDragEnterEvent, QDropEvent, QTextCursor
 
 from gui.theme import (
@@ -1053,6 +1057,8 @@ class TranslationPage(QWidget):
         self._worker.start()
 
     def _on_translate_done(self, result):
+        log.info("PDF translate [%s]: %r -> %r",
+                 result.get("engine", "?"), result["original"][:80], result["translated"][:80])
         self._float_btn.setVisible(True)
         self._cancel_btn.setVisible(False)
         QApplication.restoreOverrideCursor()
@@ -1235,7 +1241,8 @@ class TranslationPage(QWidget):
         worker = self.sender()
         if worker is not None:
             worker.wait()
-            self._overlay_workers.remove(worker)
+            if worker in self._overlay_workers:
+                self._overlay_workers.remove(worker)
         if not self._overlay_cancelled:
             stagger_ms = self.config.get("overlay_stagger_ms", 50)
             QTimer.singleShot(stagger_ms, self._start_overlay_worker)
@@ -1256,7 +1263,8 @@ class TranslationPage(QWidget):
         worker = self.sender()
         if worker is not None:
             worker.wait()
-            self._overlay_workers.remove(worker)
+            if worker in self._overlay_workers:
+                self._overlay_workers.remove(worker)
         if not self._overlay_cancelled:
             stagger_ms = self.config.get("overlay_stagger_ms", 50)
             QTimer.singleShot(stagger_ms, self._start_overlay_worker)
