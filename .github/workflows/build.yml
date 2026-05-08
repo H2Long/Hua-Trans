@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 jobs:
-  # ── Linux build ──────────────────────────────────────────────────────
+  # ── Linux AppImage build ──────────────────────────────────────────────
   linux:
     runs-on: ubuntu-latest
     steps:
@@ -21,7 +21,7 @@ jobs:
       - name: Install system deps
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq fonts-wqy-microhei
+          sudo apt-get install -y -qq fonts-wqy-microhei libfuse2
 
       - name: Install Python deps
         run: |
@@ -31,7 +31,7 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pyinstaller main.py \
-            --name=hua-trans-linux \
+            --name=hua-trans \
             --onefile \
             --windowed \
             --add-data=core:core \
@@ -50,11 +50,50 @@ jobs:
             --hidden-import=keyring \
             --noconfirm --clean
 
-      - name: Upload binary artifact
+      - name: Package as AppImage
+        run: |
+          # Create AppDir structure
+          APPDIR=AppDir
+          mkdir -p $APPDIR/usr/bin
+          cp dist/hua-trans $APPDIR/usr/bin/
+
+          # Desktop entry
+          cat > $APPDIR/hua-trans.desktop << 'DESKTOPEOF'
+          [Desktop Entry]
+          Name=黄花梨之译
+          Name[en]=Hua-Trans
+          Comment=电子工程数据手册 PDF 翻译工具
+          Comment[en]=EE Datasheet PDF Translation Tool
+          Exec=hua-trans
+          Icon=hua-trans
+          Terminal=false
+          Type=Application
+          Categories=Development;Education;Engineering;
+          DESKTOPEOF
+
+          # Icon
+          cp resources/icon.png $APPDIR/hua-trans.png 2>/dev/null || true
+
+          # AppRun launcher
+          cat > $APPDIR/AppRun << 'APPRUNEOF'
+          #!/bin/bash
+          SELF="$(dirname "$(readlink -f "$0")")"
+          exec "$SELF/usr/bin/hua-trans" "$@"
+          APPRUNEOF
+          chmod +x $APPDIR/AppRun
+
+          # Download appimagetool
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+
+          # Build AppImage
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage $APPDIR Hua-Trans-x86_64.AppImage
+
+      - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hua-trans-linux
-          path: dist/hua-trans-linux
+          name: Hua-Trans-x86_64.AppImage
+          path: Hua-Trans-x86_64.AppImage
 
   # ── Windows build ────────────────────────────────────────────────────
   windows:
@@ -109,16 +148,19 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: hua-trans-linux
+          name: Hua-Trans-x86_64.AppImage
       - uses: actions/download-artifact@v4
         with:
           name: hua-trans-windows
+
+      - name: Set AppImage as executable
+        run: chmod +x Hua-Trans-x86_64.AppImage
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            hua-trans-linux
+            Hua-Trans-x86_64.AppImage
             hua-trans-windows.exe
           generate_release_notes: true
         env:

@@ -32,19 +32,21 @@
 | 平台 | 文件 | 说明 |
 |------|------|------|
 | 🪟 Windows 10/11 | `hua-trans-windows.exe` | 双击运行，首次启动如有防火墙弹窗点允许 |
-| 🐧 Linux | `hua-trans-linux` | 下载后赋予执行权限即可 |
+| 🐧 Linux | `Hua-Trans-x86_64.AppImage` | 下载后赋予执行权限，双击或终端运行 |
 
 **Linux 额外步骤：**
 
 ```bash
-chmod +x hua-trans-linux
+chmod +x Hua-Trans-x86_64.AppImage
 
 # 可选：安装中文字体（原位翻译覆绘需要）
 sudo apt install fonts-wqy-microhei
 
 # 运行
-./hua-trans-linux
+./Hua-Trans-x86_64.AppImage
 ```
+
+> AppImage 兼容 Ubuntu 20.04+ / Debian 11+ / Fedora 36+ / Arch 等主流发行版，无需安装任何依赖。
 
 **Windows 额外步骤：**
 
