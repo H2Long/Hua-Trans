@@ -15,6 +15,16 @@ from gui.theme import (
     COMBO_BOX_STYLE, PUSH_BUTTON_STYLE, TAB_WIDGET_STYLE,
     SPLITTER_STYLE, SPIN_BOX_STYLE,
 )
+import sys as _sys
+
+if _sys.platform == "win32":
+    _CJK_FONT = "Microsoft YaHei"
+elif _sys.platform == "darwin":
+    _CJK_FONT = "PingFang SC"
+else:
+    _CJK_FONT = "WenQuanYi Micro Hei"
+
+from core.text_utils import segment_text
 from gui.widgets.term_highlighter import TermHighlighter
 
 
@@ -87,6 +97,7 @@ class TranslationPage(QWidget):
         self.ocr = ocr
         self.pdf = None  # Lazy import
         self._current_page = 0
+        self._pdf_zoom = 150  # DPI for PDF page rendering
         self._worker = None
         self._highlighter = TermHighlighter(
             accent_green=COLORS.accent_green,
@@ -184,6 +195,20 @@ class TranslationPage(QWidget):
         self._source_edit.setPlaceholderText("在此粘贴英文文本... 或使用 Ctrl+Return 热键翻译")
         trans_layout.addWidget(self._source_edit)
 
+        # Character count
+        char_count_layout = QHBoxLayout()
+        char_count_layout.setContentsMargins(0, 0, 0, 0)
+        self._char_count_label = QLabel("0 字符")
+        self._char_count_label.setStyleSheet(f"""
+            color: {c.text_dim};
+            font-family: {FONTS.mono};
+            font-size: {FONTS.size_xs}px;
+        """)
+        char_count_layout.addStretch()
+        char_count_layout.addWidget(self._char_count_label)
+        trans_layout.addLayout(char_count_layout)
+        self._source_edit.textChanged.connect(self._update_char_count)
+
         # Engine selector row with inline translate button
         ctrl_layout = QHBoxLayout()
         ctrl_layout.setSpacing(10)
@@ -242,7 +267,9 @@ class TranslationPage(QWidget):
         """)
         trans_layout.addWidget(sep_line)
 
-        # Translation result
+        # Translation result header with copy button
+        result_header = QHBoxLayout()
+        result_header.setSpacing(8)
         self._result_label = QLabel("翻译结果")
         self._result_label.setStyleSheet(f"""
             color: {c.text_dim};
@@ -250,7 +277,31 @@ class TranslationPage(QWidget):
             font-size: {FONTS.size_xs}px;
             letter-spacing: 1px;
         """)
-        trans_layout.addWidget(self._result_label)
+        result_header.addWidget(self._result_label)
+        result_header.addStretch()
+        self._copy_result_btn = QPushButton("复制译文")
+        self._copy_result_btn.setFixedHeight(28)
+        self._copy_result_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._copy_result_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {c.bg_elevated};
+                color: {c.text_secondary};
+                border: 1px solid {c.border_default};
+                border-radius: 8px;
+                padding: 4px 12px;
+                font-family: {FONTS.display};
+                font-size: {FONTS.size_xs}px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{
+                border-color: {c.accent_green};
+                color: {c.accent_green};
+            }}
+        """)
+        self._copy_result_btn.clicked.connect(self._copy_translation_result)
+        self._copy_result_btn.setEnabled(False)
+        result_header.addWidget(self._copy_result_btn)
+        trans_layout.addLayout(result_header)
 
         self._result_edit = QTextEdit()
         self._result_edit.setReadOnly(True)
@@ -353,6 +404,30 @@ class TranslationPage(QWidget):
         next_btn.setStyleSheet(PUSH_BUTTON_STYLE)
         next_btn.clicked.connect(self._next_page)
         bar_layout.addWidget(next_btn)
+
+        # Zoom controls
+        bar_layout.addSpacing(14)
+        zoom_label = QLabel("缩放:")
+        zoom_label.setStyleSheet(f"color: {c.text_secondary}; font-size: {FONTS.size_xs}px; font-family: {FONTS.body};")
+        bar_layout.addWidget(zoom_label)
+
+        self._zoom_out_btn = QPushButton("−")
+        self._zoom_out_btn.setFixedSize(30, 30)
+        self._zoom_out_btn.setStyleSheet(PUSH_BUTTON_STYLE)
+        self._zoom_out_btn.clicked.connect(self._zoom_out)
+        bar_layout.addWidget(self._zoom_out_btn)
+
+        self._zoom_label = QLabel("150%")
+        self._zoom_label.setFixedWidth(42)
+        self._zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._zoom_label.setStyleSheet(f"color: {c.text_primary}; font-family: {FONTS.mono}; font-size: {FONTS.size_xs}px;")
+        bar_layout.addWidget(self._zoom_label)
+
+        self._zoom_in_btn = QPushButton("+")
+        self._zoom_in_btn.setFixedSize(30, 30)
+        self._zoom_in_btn.setStyleSheet(PUSH_BUTTON_STYLE)
+        self._zoom_in_btn.clicked.connect(self._zoom_in)
+        bar_layout.addWidget(self._zoom_in_btn)
 
         bar_layout.addStretch()
 
@@ -593,6 +668,38 @@ class TranslationPage(QWidget):
 
         layout.addWidget(self._mode_tabs, 1)
 
+    def _update_char_count(self):
+        """Update the character count label and warn when approaching limits."""
+        text = self._source_edit.toPlainText()
+        count = len(text)
+        engine = self._engine_combo.currentText()
+        if engine == "google":
+            limit = 5000
+        elif engine == "llm":
+            limit = 8000
+        else:
+            limit = 10000
+        self._char_count_label.setText(f"{count:,} / {limit:,} 字符")
+        if count > limit * 0.9:
+            self._char_count_label.setStyleSheet(
+                f"color: {COLORS.accent_orange}; font-family: {FONTS.mono}; font-size: {FONTS.size_xs}px;"
+            )
+        elif count > limit:
+            self._char_count_label.setStyleSheet(
+                f"color: {COLORS.accent_red}; font-family: {FONTS.mono}; font-size: {FONTS.size_xs}px;"
+            )
+        else:
+            self._char_count_label.setStyleSheet(
+                f"color: {COLORS.text_dim}; font-family: {FONTS.mono}; font-size: {FONTS.size_xs}px;"
+            )
+
+    def _copy_translation_result(self):
+        """Copy the translated text to clipboard."""
+        text = self._result_edit.toPlainText()
+        if text:
+            QApplication.clipboard().setText(text)
+            self.status_message.emit("译文已复制到剪贴板")
+
     def _swap_languages(self):
         """Swap source and target languages."""
         src_text = self._source_lang.currentText()
@@ -756,7 +863,7 @@ class TranslationPage(QWidget):
 
         # Render page image
         from PyQt5.QtGui import QPixmap
-        img_bytes = self.pdf.get_page_image(page_num, dpi=150)
+        img_bytes = self.pdf.get_page_image(page_num, dpi=self._pdf_zoom)
         if img_bytes:
             pixmap = QPixmap()
             pixmap.loadFromData(img_bytes)
@@ -780,6 +887,31 @@ class TranslationPage(QWidget):
 
     def _goto_page(self, page):
         self._load_page(page - 1)
+
+    def _zoom_in(self):
+        """Increase PDF page render DPI."""
+        self._pdf_zoom = min(400, self._pdf_zoom + 25)
+        self._zoom_label.setText(f"{self._pdf_zoom}%")
+        if self.pdf.doc:
+            self._load_page(self._current_page)
+
+    def _zoom_out(self):
+        """Decrease PDF page render DPI."""
+        self._pdf_zoom = max(50, self._pdf_zoom - 25)
+        self._zoom_label.setText(f"{self._pdf_zoom}%")
+        if self.pdf.doc:
+            self._load_page(self._current_page)
+
+    def wheelEvent(self, event):
+        """Ctrl+scroll to zoom PDF pages."""
+        if self._mode_tabs.currentIndex() == 1 and \
+           event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            if event.angleDelta().y() > 0:
+                self._zoom_in()
+            else:
+                self._zoom_out()
+            return
+        super().wheelEvent(event)
 
     def _prev_page(self):
         if self._current_page > 0:
@@ -919,6 +1051,9 @@ class TranslationPage(QWidget):
         else:
             self._result_edit.setPlainText(translated)
 
+        # Enable copy button
+        self._copy_result_btn.setEnabled(True)
+
         # Show applied terms
         terms = result.get("terms_applied", [])
         if terms:
@@ -937,13 +1072,22 @@ class TranslationPage(QWidget):
             self._pair_table.set_pairs(sources, translations)
             self._pair_table.animate_rows_in(delay_ms=40)
 
+        # Track API usage
+        try:
+            from core.usage_tracker import UsageTracker
+            win = self.window()
+            if hasattr(win, '_usage_tracker') and not result.get("from_cache"):
+                win._usage_tracker.record(result["engine"], len(original))
+        except Exception:
+            pass
+
         cache_info = " [缓存]" if result.get("from_cache") else ""
         self.status_message.emit(f"翻译完成 // {result['engine']}{cache_info}")
 
         # Emit for history auto-save
         self.translation_done.emit(result["original"], translated, result["engine"])
 
-        # Flash green border to signal completion
+        # Enhanced completion animation
         self._flash_result_border()
 
     def _on_translate_error(self, error):
@@ -955,32 +1099,6 @@ class TranslationPage(QWidget):
         self.status_message.emit(f"错误: {error}")
         QMessageBox.warning(self, "翻译错误", error)
 
-    def _is_cjk(self, ch: str) -> bool:
-        """Check if a character is Chinese/Japanese/Korean."""
-        cp = ord(ch)
-        return (0x4E00 <= cp <= 0x9FFF or 0x3400 <= cp <= 0x4DBF or
-                0x20000 <= cp <= 0x2A6DF or 0xF900 <= cp <= 0xFAFF or
-                0x3040 <= cp <= 0x309F or 0x30A0 <= cp <= 0x30FF or  # Kana
-                0xAC00 <= cp <= 0xD7AF)  # Hangul
-
-    def _segment_text(self, text: str) -> list[tuple[bool, str]]:
-        """Split text into (is_cjk, substring) alternating runs."""
-        if not text:
-            return []
-        segments = []
-        current = text[0]
-        current_is_cjk = self._is_cjk(text[0])
-        for ch in text[1:]:
-            ch_is_cjk = self._is_cjk(ch)
-            # Treat spaces/punctuation as belonging to previous segment
-            if ch_is_cjk == current_is_cjk or ch.isspace() or ch in '.,;:!?()[]{}<>':
-                current += ch
-            else:
-                segments.append((current_is_cjk, current))
-                current = ch
-                current_is_cjk = ch_is_cjk
-        segments.append((current_is_cjk, current))
-        return segments
 
     def _overlay_translate(self):
         """Translate only English segments, preserve Chinese text in place."""
@@ -1003,7 +1121,7 @@ class TranslationPage(QWidget):
         block_segments = []   # list of [(is_cjk, text)] with merged EN runs
         en_texts = []         # flat list of English strings in order
         for b in valid_blocks:
-            segs = self._segment_text(b["text"].strip())
+            segs = segment_text(b["text"].strip())
             # Merge consecutive EN segments for better translation quality
             merged = []
             i = 0
@@ -1050,10 +1168,12 @@ class TranslationPage(QWidget):
         self.status_message.emit(
             f"原位翻译中... (0/{self._overlay_total})"
         )
-        # Launch initial batch of concurrent workers (staggered to avoid TLS contention)
+        # Launch initial batch of concurrent workers
+        # Staggered to avoid API rate limits and TLS contention
         concurrent = min(3, self._overlay_total)
+        stagger_ms = self.config.get("overlay_stagger_ms", 500)
         for i in range(concurrent):
-            QTimer.singleShot(i * 150, self._start_overlay_worker)
+            QTimer.singleShot(i * stagger_ms, self._start_overlay_worker)
 
     def _start_overlay_worker(self):
         """Start a worker for the next untranslated segment, if any."""
@@ -1099,7 +1219,8 @@ class TranslationPage(QWidget):
         worker.wait()
         self._overlay_workers.remove(worker)
         if not self._overlay_cancelled:
-            self._start_overlay_worker()
+            stagger_ms = self.config.get("overlay_stagger_ms", 500)
+            QTimer.singleShot(stagger_ms, self._start_overlay_worker)
         self._check_overlay_done()
 
     def _on_segment_error(self, error):
@@ -1118,7 +1239,8 @@ class TranslationPage(QWidget):
         worker.wait()
         self._overlay_workers.remove(worker)
         if not self._overlay_cancelled:
-            self._start_overlay_worker()
+            stagger_ms = self.config.get("overlay_stagger_ms", 500)
+            QTimer.singleShot(stagger_ms, self._start_overlay_worker)
         self._check_overlay_done()
 
     def _check_overlay_done(self):
@@ -1216,7 +1338,7 @@ class TranslationPage(QWidget):
 
             # Iterative shrink: set font, measure, reduce, repeat until text fits
             for _ in range(5):
-                font = QFont("WenQuanYi Micro Hei", font_size)
+                font = QFont(_CJK_FONT, font_size)
                 painter.setFont(font)
                 text_rect = painter.boundingRect(rx + 3, ry + 2, rw - 6, rh - 4,
                                                  Qt.TextFlag.TextWordWrap, translated)
@@ -1257,7 +1379,7 @@ class TranslationPage(QWidget):
             self.status_message.emit("正在取消...")
 
     def _flash_result_border(self):
-        """Briefly flash the result area border green to signal completion."""
+        """Animate the result area border green → fade back over 1.5s."""
         c = COLORS
         self._result_edit.setStyleSheet(f"""
             QTextEdit {{
@@ -1273,7 +1395,44 @@ class TranslationPage(QWidget):
                 selection-background-color: {c.accent_green}30;
             }}
         """)
-        QTimer.singleShot(400, self._restore_result_border)
+        # Step down opacity over 3 stages for a smooth fade
+        QTimer.singleShot(500, self._flash_step1)
+        QTimer.singleShot(1000, self._flash_step2)
+        QTimer.singleShot(1500, self._restore_result_border)
+
+    def _flash_step1(self):
+        c = COLORS
+        self._result_edit.setStyleSheet(f"""
+            QTextEdit {{
+                background: {c.bg_elevated};
+                color: {c.text_primary};
+                border: 1px solid {c.accent_green}99;
+                border-left: 3px solid {c.accent_green}80;
+                border-radius: 10px;
+                padding: 16px;
+                font-family: 'SF Pro Text', 'Noto Sans SC', sans-serif;
+                font-size: 17px;
+                line-height: 1.8;
+                selection-background-color: {c.accent_green}30;
+            }}
+        """)
+
+    def _flash_step2(self):
+        c = COLORS
+        self._result_edit.setStyleSheet(f"""
+            QTextEdit {{
+                background: {c.bg_elevated};
+                color: {c.text_primary};
+                border: 1px solid {c.border_default};
+                border-left: 3px solid {c.accent_green}60;
+                border-radius: 10px;
+                padding: 16px;
+                font-family: 'SF Pro Text', 'Noto Sans SC', sans-serif;
+                font-size: 17px;
+                line-height: 1.8;
+                selection-background-color: {c.accent_green}30;
+            }}
+        """)
 
     def _restore_result_border(self):
         """Restore normal result border after flash."""

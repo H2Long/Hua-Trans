@@ -1,13 +1,18 @@
 """TranslateTor - Universal Translation Tool with EE Terminology.
 
 Main entry point. Handles hotkey registration, clipboard monitoring,
-and launches the PyQt5 application.
+system tray, and launches the PyQt5 application.
 """
 
 import sys
+import os
+from pathlib import Path
 
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtWidgets import (
+    QApplication, QSystemTrayIcon, QMenu, QAction, QMessageBox,
+)
+from PyQt5.QtCore import QObject, pyqtSignal, Qt
+from PyQt5.QtGui import QIcon
 
 from core.config import load_config, save_config
 from core.terminology import TerminologyDB
@@ -51,13 +56,6 @@ def create_hotkey_callback(config, clipboard, bridge, floating,
         else:
             try:
                 result = translator.translate(text, engine)
-                if config.get("cache_enabled"):
-                    cache.put(
-                        result["original"], result["translated"],
-                        result["engine"],
-                        config.get("source_lang", "en"),
-                        config.get("target_lang", "zh"),
-                    )
             except Exception as e:
                 result = {"original": text, "translated": f"Error: {e}", "engine": engine, "terms_applied": []}
 
@@ -66,8 +64,22 @@ def create_hotkey_callback(config, clipboard, bridge, floating,
     return on_hotkey
 
 
+def _load_app_icon():
+    """Load the application icon for tray and windows."""
+    paths = [
+        Path(__file__).parent / "resources" / "icon.png",
+        Path.home() / ".translatetor" / "icon.png",
+    ]
+    for p in paths:
+        if p.exists():
+            return QIcon(str(p))
+    # Fallback: use a built-in QStyle icon
+    return QApplication.style().standardIcon(
+        QApplication.style().SP_ComputerIcon
+    )
+
+
 def main():
-    import os
     import signal as _signal
 
     # Enable input method support (for Chinese pinyin, etc.)
@@ -95,10 +107,52 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("黄花梨之译")
     app.setApplicationDisplayName("黄花梨之译")
+    # Don't quit when last window is hidden (tray stays alive)
+    app.setQuitOnLastWindowClosed(False)
+
+    # Load app icon
+    app_icon = _load_app_icon()
+    app.setWindowIcon(app_icon)
 
     # Create UI
     main_win = MainWindow(config, terminology, translator, cache, ocr)
+    main_win.setWindowIcon(app_icon)
     floating = FloatingTranslation(config, available_engines=translator.get_available_engines())
+
+    # -- System tray ----------------------------------------------------
+    tray = QSystemTrayIcon(app_icon, app)
+    tray.setToolTip("黄花梨之译")
+
+    tray_menu = QMenu()
+
+    show_action = QAction("显示主窗口", tray_menu)
+    show_action.triggered.connect(lambda: _show_main_window(main_win))
+
+    floating_action = QAction("触发悬浮翻译", tray_menu)
+    floating_action.triggered.connect(lambda: _tray_floating_translate(
+        clipboard, floating, translator, config, cache, main_win,
+    ))
+
+    tray_menu.addAction(show_action)
+    tray_menu.addAction(floating_action)
+    tray_menu.addSeparator()
+
+    quit_action = QAction("退出", tray_menu)
+    quit_action.triggered.connect(lambda: _quit_app(app, main_win, config, hotkey_mgr))
+    tray_menu.addAction(quit_action)
+
+    tray.setContextMenu(tray_menu)
+    tray.activated.connect(lambda reason: _on_tray_activated(reason, main_win, floating,
+                                                              clipboard, translator, config, cache))
+    tray.show()
+
+    # Minimize to tray instead of closing
+    main_win._tray = tray
+    main_win._app = app
+
+    # Store usage tracker ref on main_win for status bar updates
+    from core.usage_tracker import UsageTracker
+    main_win._usage_tracker = UsageTracker.instance(str(cache.db_path))
 
     # Hotkey bridge — runs in main thread via queued signal
     bridge = HotkeyBridge()
@@ -117,6 +171,10 @@ def main():
                 config.get("source_lang", "en"),
                 config.get("target_lang", "zh"),
             )
+        # Track usage
+        main_win._usage_tracker.record(
+            result["engine"], len(result["original"]),
+        )
         main_win.hotkey_translate.emit(result["translated"])
 
     bridge.triggered.connect(on_hotkey_result)
@@ -159,6 +217,7 @@ def main():
     print(f"  OCR:        {'Available' if ocr.is_available() else 'Not installed'}")
     print(f"  Terms:      {len(terminology.get_all_terms())} loaded")
     print(f"  Cache:      {cache.stats()['total_entries']} entries")
+    print(f"  Tray:       Running (close window to minimize)")
     print("=" * 50)
     print()
 
@@ -167,6 +226,55 @@ def main():
     finally:
         hotkey_mgr.unregister()
         print("Goodbye.")
+
+
+def _show_main_window(main_win):
+    """Show and activate the main window."""
+    main_win.show()
+    main_win.raise_()
+    main_win.activateWindow()
+
+
+def _tray_floating_translate(clipboard, floating, translator, config, cache, main_win):
+    """Trigger a floating translation from the tray menu."""
+    text = clipboard.get_selected_text_via_copy()
+    if not text:
+        text = clipboard.get_text_and_restore()
+    if not text:
+        return
+    engine = config.get("translation_engine", "google")
+    try:
+        result = translator.translate(text, engine)
+        floating.show_translation(
+            result["original"], result["translated"],
+            result["engine"], result.get("terms_applied"),
+        )
+        if config.get("cache_enabled", True):
+            cache.put(
+                result["original"], result["translated"],
+                result["engine"],
+                config.get("source_lang", "en"),
+                config.get("target_lang", "zh"),
+            )
+        main_win._usage_tracker.record(result["engine"], len(result["original"]))
+    except Exception as e:
+        floating.show_translation(text, f"Error: {e}", engine)
+
+
+def _on_tray_activated(reason, main_win, floating, clipboard, translator, config, cache):
+    """Handle tray icon activation (click/double-click)."""
+    if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+        _show_main_window(main_win)
+    elif reason == QSystemTrayIcon.ActivationReason.Trigger:
+        # Single click: trigger floating translate
+        _tray_floating_translate(clipboard, floating, translator, config, cache, main_win)
+
+
+def _quit_app(app, main_win, config, hotkey_mgr):
+    """Properly quit the application."""
+    main_win.close()  # Saves geometry via closeEvent
+    hotkey_mgr.unregister()
+    app.quit()
 
 
 if __name__ == "__main__":

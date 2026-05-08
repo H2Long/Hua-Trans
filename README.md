@@ -1,59 +1,92 @@
 # 黄花梨之译 (Hua-Trans)
 
-面向电子信息专业人员的 PDF 数据手册翻译工具。选中文本一键翻译，PDF 原位覆译，318 个内置 EE 专业术语。
+面向电子信息专业人员的 PDF 数据手册翻译工具。选中文本一键翻译，PDF 原位覆译，356 个内置 EE 专业术语。**支持 Linux / Windows。**
 
 ## 功能
 
 - **热键翻译**：任意应用选中英文文本 → `Ctrl+Shift+T` → 鼠标旁弹出译文
 - **PDF 原位翻译**：打开 PDF 数据手册 → 点击「原位翻译」→ 英文块替换为中文（左原图/右译文对照）
 - **多翻译引擎**：Google（免费）、DeepL、Claude/GPT（需 API Key）
-- **EE 术语库**：318 条内置电子工程术语，支持自定义增删导入导出
-- **PDF 工具集**：文本提取、目录解析、OCR 扫描件、页面搜索、拖拽打开
+- **EE 术语库**：356 条内置电子工程术语，支持自定义增删导入导出
+- **PDF 工具集**：文本提取、目录解析、OCR 扫描件、页面搜索、拖拽打开、Ctrl+滚轮缩放
 - **翻译缓存**：SQLite 本地缓存，重复文本秒出结果
+- **系统托盘**：关闭窗口最小化到托盘，后台随时待命
+- **主题切换**：侧栏一键切换暗色/亮色，5 套主题可选
 
 ## 系统要求
 
-- **操作系统**：Linux（X11）
-- **Python**：3.10+
-- **依赖包**：PyQt5, PyMuPDF, python-xlib, pyperclip, Pillow, requests
-- **可选**：Tesseract OCR（扫描件 OCR 需要）
+| 要求 | Linux | Windows |
+|------|-------|---------|
+| 操作系统 | X11 (Wayland 需 XWayland) | Windows 10+ |
+| Python | 3.10+ | 3.10+ |
+| 热键依赖 | python-xlib (XGrabKey) | pynput |
+| 中文字体 | fonts-wqy-microhei | Microsoft YaHei (系统自带) |
+| 可选 | Tesseract OCR | Tesseract OCR |
 
 ## 快速安装
 
-### 方式一：一键脚本
+### Linux
 
 ```bash
+# 一键安装（推荐）
 curl -fsSL https://raw.githubusercontent.com/H2Long/Hua-Trans/main/install.sh | bash
+
+# 或手动安装
+git clone git@github.com:H2Long/Hua-Trans.git
+cd Hua-Trans
+pip install -r requirements.txt
+sudo apt install fonts-wqy-microhei   # 原位翻译中文字体
 ```
 
-### 方式二：手动安装
+安装后终端输入 `hua-trans` 启动，或在应用菜单搜索「黄花梨之译」。
 
-```bash
+### Windows
+
+**方式一：一键安装脚本（推荐）**
+
+在 PowerShell 中运行（右键 → 以管理员身份运行，非必须但推荐）：
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+iwr -Uri "https://raw.githubusercontent.com/H2Long/Hua-Trans/main/install.ps1" -OutFile "$env:TEMP\install.ps1"
+& "$env:TEMP\install.ps1"
+```
+
+脚本会自动：检测 Python → 安装依赖 → 创建开始菜单快捷方式 → 可选安装 Tesseract OCR。
+
+**方式二：手动安装**
+
+```powershell
 # 克隆仓库
-git clone git@github.com:H2Long/Hua-Trans.git
+git clone https://github.com/H2Long/Hua-Trans.git
 cd Hua-Trans
 
 # 安装依赖
 pip install -r requirements.txt
 
-# 安装中文字体（原位翻译覆绘需要）
-sudo apt install fonts-wqy-microhei
-
-# 可选：安装 OCR 支持
-sudo apt install tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim
+# 启动
+python main.py
 ```
+
+### macOS（实验性）
+
+```bash
+git clone https://github.com/H2Long/Hua-Trans.git
+cd Hua-Trans
+pip install -r requirements.txt
+python main.py
+```
+
+> macOS 热键功能需要 `pynput` 辅助功能权限。手动安装：`pip install pynput`。
 
 ## 使用
 
 ### 启动
 
-```bash
-# 克隆后直接启动
-./hua-trans
-
-# 或手动
-python3 main.py
-```
+| 平台 | 方式 |
+|------|------|
+| Linux | 终端 `hua-trans` 或应用菜单「黄花梨之译」 |
+| Windows | 开始菜单「黄花梨之译」或终端 `python main.py` |
 
 ### 热键翻译
 
@@ -69,29 +102,26 @@ python3 main.py
 
 ### PDF 翻译
 
-1. 点击工具栏「打开 PDF」或拖拽 PDF 到窗口
+1. 点击工具栏「打开 PDF」或**拖拽 PDF 到窗口**
 2. 左侧目录，右侧文本内容
 3. 在「PDF 阅读」标签页中浏览
+4. `Ctrl+滚轮` 缩放页面，`+` / `−` 按钮调整分辨率
 
 **原位翻译**：
 1. 打开 PDF 数据手册，定位到需要翻译的页面
 2. 点击「原位翻译」按钮
 3. 左面板显示原页面，右面板显示译文覆绘
 
-**面板翻译**：
-1. 切换到「翻译」标签
-2. 粘贴或从 PDF 选中文本后右键「翻译选中文本」
-3. 点击「翻译」或 `Ctrl+Return`
-
 ### 快捷键
 
 | 快捷键 | 功能 |
 |--------|------|
-| `Ctrl+Shift+T` | 全局热键翻译 |
+| `Ctrl+Shift+T` | 全局热键翻译（选中文本即可） |
 | `Ctrl+Return` | 翻译面板提交 |
 | `Ctrl+1` ~ `Ctrl+4` | 切换页面标签 |
 | `←` `→` | PDF 翻页 |
 | `Ctrl+F` | PDF 页面搜索 |
+| `Ctrl+滚轮` | PDF 页面缩放 |
 
 ## 配置
 
@@ -119,7 +149,7 @@ python3 main.py
 | 引擎 | 说明 |
 |------|------|
 | `google` | 免费，无需 API Key，适合大量使用 |
-| `deepl` | 需要 DeepL API Key（`deepl_api_key`） |
+| `deepl` | 需要 DeepL API Key（`deepl_api_key`）。免费 Key 以 `:fx` 结尾 |
 | `llm` | 兼容 Anthropic / OpenAI API（`llm_api_key`, `llm_base_url`, `llm_model`） |
 
 ### 主题
@@ -130,9 +160,11 @@ python3 main.py
 - `dark_professional` — VS Code 暗色
 - `minimal_white` — 纯白
 
+**快速切换**：侧栏底部 ☀/☾ 按钮一键切换暗色/亮色。
+
 ## 术语库
 
-内置 318 条电子工程专业术语，涵盖：
+内置 356 条电子工程专业术语，涵盖：
 - 半导体器件（MOSFET, BJT, Schottky, Latch-up...）
 - 放大器参数（Phase Margin, CMRR, Slew Rate...）
 - 数据转换器（ADC, ENOB, SFDR, DNL...）
@@ -165,7 +197,8 @@ python3 main.py
 pip install -r requirements.txt
 
 # 运行
-./hua-trans
+./hua-trans       # Linux
+python main.py    # Windows / macOS
 
 # 打包为独立可执行文件
 pip install pyinstaller
@@ -176,20 +209,22 @@ python build.py
 ## 项目结构
 
 ```
-main.py                 # 入口
+main.py                 # 入口 + 系统托盘
 core/                   # 业务逻辑
   config.py             # 配置管理
   translator.py         # 翻译引擎（Google/DeepL/LLM）
   terminology.py        # EE 术语库
-  cache.py              # SQLite 翻译缓存
-  clipboard.py          # 剪贴板管理（X11 PRIMARY 选区）
+  cache.py              # SQLite 翻译缓存（连接复用）
+  clipboard.py          # 剪贴板管理（X11/Win 平台适配）
   pdf_handler.py        # PDF 文本提取/渲染
   ocr_handler.py        # Tesseract OCR
-  hotkey_manager.py     # 运行时热键管理
+  hotkey_manager.py     # 热键管理（Linux X11 / Win pynput）
+  text_utils.py         # CJK 文本分段工具
+  usage_tracker.py      # API 用量统计
 gui/                    # PyQt5 界面
   main_window.py        # 主窗口 + 侧栏导航
   floating_widget.py    # 悬浮翻译窗
-  sidebar.py            # 玻璃质感侧栏
+  sidebar.py            # 侧栏 + 主题切换
   theme.py              # 主题系统（5 套配色）
   pages/                # 4 个页面标签
   widgets/              # 可复用控件
@@ -199,22 +234,24 @@ gui/                    # PyQt5 界面
 
 ### 热键不生效
 
-- 确认 `python-xlib` 已安装：`pip install python-xlib`
-- 检查快捷键是否与其他程序冲突
-- X11 环境下无需 root 权限
+- **Linux**：确认 `python-xlib` 已安装：`pip install python-xlib`。X11 下无需 root。
+- **Windows**：确认 `pynput` 已安装：`pip install pynput`。Firewall 弹窗点允许。
+- 检查快捷键是否与其他程序冲突。
 
 ### OCR 不可用
 
-- 安装 tesseract：`sudo apt install tesseract-ocr tesseract-ocr-eng`
+- **Linux**：`sudo apt install tesseract-ocr tesseract-ocr-eng`
+- **Windows**：安装 [Tesseract-OCR](https://github.com/UB-Mannheim/tesseract/wiki)，安装时勾选中文语言包
 
-### 原位翻译中文显示不全
+### 原位翻译中文不显示 / 显示乱码
 
-- 安装中文字体：`sudo apt install fonts-wqy-microhei`
+- **Linux**：`sudo apt install fonts-wqy-microhei`
+- **Windows**：系统自带 Microsoft YaHei 无需额外安装
 
 ### 翻译引擎报错
 
-- Google：检查网络连接，Google Translate API 可能需要代理
-- DeepL：确认 API Key 正确，免费版使用 `https://api-free.deepl.com`
+- Google：检查网络连接，可能需要代理
+- DeepL：免费 Key 以 `:fx` 结尾，使用 `https://api-free.deepl.com`
 - LLM：确认 `llm_base_url` 和 `llm_model` 与你的 API 提供商匹配
 
 ## 许可证

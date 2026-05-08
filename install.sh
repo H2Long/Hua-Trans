@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# 黄花梨之译 (Hua-Trans) — 一键安装脚本
-# 用法: curl -fsSL <url> | bash  或  ./install.sh
+# 黄花梨之译 (Hua-Trans) — Linux 一键安装脚本
+# 支持: Ubuntu/Debian, Fedora, Arch 等主流 Linux 发行版
+# 用法: curl -fsSL https://raw.githubusercontent.com/H2Long/Hua-Trans/main/install.sh | bash
+#       ./install.sh
+# Windows 用户请使用 install.ps1（PowerShell）
 set -euo pipefail
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'

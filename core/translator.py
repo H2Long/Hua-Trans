@@ -50,8 +50,10 @@ class DeepLTranslator:
 
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.base_url = "https://api-free.deepl.com/v2/translate"
-        if not api_key.endswith(":fx"):
+        # Free API keys end with ":fx", pro keys do not
+        if api_key.endswith(":fx"):
+            self.base_url = "https://api-free.deepl.com/v2/translate"
+        else:
             self.base_url = "https://api.deepl.com/v2/translate"
 
     def translate(self, text: str, source_lang: str = "EN", target_lang: str = "ZH") -> str:

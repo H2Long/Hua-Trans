@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QLabel, QPushButton, QFrame, QFileDialog, QMessageBox,
     QHeaderView, QSplitter, QTextEdit, QAbstractItemView,
+    QMenu, QAction, QApplication,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
@@ -93,7 +94,10 @@ class HistoryPage(QWidget):
         self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._table.customContextMenuRequested.connect(self._on_table_context_menu)
         self._table.doubleClicked.connect(self._show_detail)
+        self._table.setToolTip("双击查看详情 · 右键菜单更多操作")
         splitter.addWidget(self._table)
 
         # Detail panel
@@ -159,6 +163,39 @@ class HistoryPage(QWidget):
 
     def _on_search(self, query: str):
         self.refresh()
+
+    def _on_table_context_menu(self, pos):
+        """Right-click context menu for history table rows."""
+        row = self._table.rowAt(pos.y())
+        if row < 0:
+            return
+        item = self._table.item(row, 1)
+        if not item:
+            return
+        rec = item.data(Qt.ItemDataRole.UserRole)
+        if not rec:
+            return
+
+        menu = QMenu(self)
+        retranslate_action = QAction("重新翻译", self)
+        retranslate_action.triggered.connect(
+            lambda: self.fill_requested.emit(rec.get("source_text", ""))
+        )
+        menu.addAction(retranslate_action)
+
+        copy_action = QAction("复制译文", self)
+        copy_action.triggered.connect(
+            lambda: QApplication.clipboard().setText(rec.get("translated_text", ""))
+        )
+        menu.addAction(copy_action)
+
+        menu.addSeparator()
+
+        detail_action = QAction("查看详情", self)
+        detail_action.triggered.connect(lambda: self._show_detail(self._table.model().index(row, 0)))
+        menu.addAction(detail_action)
+
+        menu.exec_(self._table.viewport().mapToGlobal(pos))
 
     def _show_detail(self, index):
         row = index.row()

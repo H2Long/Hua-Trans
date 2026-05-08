@@ -3,8 +3,11 @@
 On X11, mouse-selected text is automatically available in the PRIMARY
 selection — no Ctrl+C needed. We read PRIMARY first, fall back to
 CLIPBOARD (explicitly copied text).
+
+On Windows/macOS, only CLIPBOARD is available (handled by pyperclip).
 """
 
+import sys
 import subprocess
 import pyperclip
 
@@ -54,17 +57,20 @@ class ClipboardManager:
         On X11, reads the PRIMARY selection which automatically
         contains whatever text the user has highlighted with the mouse.
         Falls back to CLIPBOARD (explicitly copied text).
+
+        On Windows/macOS, PRIMARY doesn't exist — directly reads CLIPBOARD.
         """
-        # Try X11 PRIMARY selection first (auto-selected text)
-        try:
-            result = subprocess.run(
-                ["xclip", "-selection", "primary", "-o"],
-                capture_output=True, text=True, timeout=2,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip()
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
+        # X11 PRIMARY selection (auto-selected text) — Linux only
+        if sys.platform == "linux":
+            try:
+                result = subprocess.run(
+                    ["xclip", "-selection", "primary", "-o"],
+                    capture_output=True, text=True, timeout=2,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    return result.stdout.strip()
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
 
         # Fall back to CLIPBOARD (manually copied text)
         return self.get_text_and_restore()

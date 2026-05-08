@@ -362,6 +362,7 @@ class TerminologyDB:
 
     def __init__(self):
         self.terms: dict[str, str] = {}
+        self._compiled_pattern: re.Pattern | None = None
         self._load()
 
     def _load(self):
@@ -374,6 +375,9 @@ class TerminologyDB:
                 self.terms.update(user_terms)
             except (json.JSONDecodeError, IOError):
                 pass
+
+    def _invalidate_cache(self):
+        self._compiled_pattern = None
 
     def save(self):
         """Save user-customized terms to file."""
@@ -389,12 +393,14 @@ class TerminologyDB:
     def add_term(self, en: str, zh: str):
         """Add or update a term."""
         self.terms[en] = zh
+        self._invalidate_cache()
         self.save()
 
     def remove_term(self, en: str):
         """Remove a term."""
         if en in self.terms:
             del self.terms[en]
+            self._invalidate_cache()
             self.save()
 
     def lookup(self, text: str) -> list[tuple[str, str, int, int]]:
@@ -406,21 +412,23 @@ class TerminologyDB:
         text_lower = text.lower()
         matches = []
 
-        # Fast path: regex scan all terms at once, O(text_length)
-        # Build a reverse map: lower_term -> (original_term, zh)
-        term_map: dict[str, tuple[str, str]] = {}
-        for en, zh in self.terms.items():
-            en_lower = en.lower()
-            if en_lower not in term_map or len(en) > len(term_map[en_lower][0]):
-                term_map[en_lower] = (en, zh)
+        # Build term map and compiled regex (cached until terms change)
+        if self._compiled_pattern is None:
+            term_map: dict[str, tuple[str, str]] = {}
+            for en, zh in self.terms.items():
+                en_lower = en.lower()
+                if en_lower not in term_map or len(en) > len(term_map[en_lower][0]):
+                    term_map[en_lower] = (en, zh)
+            if not term_map:
+                return []
+            sorted_terms = sorted(term_map.keys(), key=len, reverse=True)
+            pattern = "|".join(re.escape(t) for t in sorted_terms)
+            self._compiled_pattern = re.compile(pattern)
+            self._term_map_cache = term_map
+        else:
+            term_map = self._term_map_cache
 
-        if not term_map:
-            return []
-
-        # Sort by length descending so longer matches take priority
-        sorted_terms = sorted(term_map.keys(), key=len, reverse=True)
-        pattern = "|".join(re.escape(t) for t in sorted_terms)
-        for m in re.finditer(pattern, text_lower):
+        for m in re.finditer(self._compiled_pattern, text_lower):
             term_key = m.group()
             en, zh = term_map[term_key]
             matches.append((en, zh, m.start(), m.end()))
@@ -463,6 +471,7 @@ class TerminologyDB:
     def reset_to_defaults(self):
         """Reset all terms to built-in defaults, deleting user customizations."""
         self.terms = DEFAULT_TERMS.copy()
+        self._invalidate_cache()
         if TERMS_FILE.exists():
             TERMS_FILE.unlink()
 

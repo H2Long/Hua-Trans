@@ -51,11 +51,13 @@ class Sidebar(QWidget):
     """Vertical sidebar navigation with glass-morphism effect."""
 
     currentChanged = pyqtSignal(int)
+    themeToggleRequested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedWidth(220)
         self._current_index = 0
+        self._is_dark = True
         self._setup_ui()
 
     def _setup_ui(self):
@@ -206,6 +208,28 @@ class Sidebar(QWidget):
         status_row.addStretch()
         footer_layout.addLayout(status_row)
 
+        # Theme toggle + version row
+        bottom_row = QHBoxLayout()
+        bottom_row.setSpacing(6)
+        bottom_row.setContentsMargins(0, 0, 0, 0)
+
+        self._theme_toggle_btn = QPushButton("☀")
+        self._theme_toggle_btn.setFixedSize(26, 26)
+        self._theme_toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._theme_toggle_btn.setToolTip("切换亮色/暗色主题")
+        self._theme_toggle_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: transparent;
+                color: {c.text_dim};
+                border: none;
+                border-radius: 13px;
+                font-size: 14px;
+            }}
+            QPushButton:hover {{ color: {c.accent_blue}; }}
+        """)
+        self._theme_toggle_btn.clicked.connect(self._on_theme_toggle)
+        bottom_row.addWidget(self._theme_toggle_btn)
+
         version = QLabel("v1.0")
         version.setStyleSheet(f"""
             color: {c.text_dim};
@@ -213,7 +237,9 @@ class Sidebar(QWidget):
             font-size: 10px;
             letter-spacing: 1px;
         """)
-        footer_layout.addWidget(version)
+        bottom_row.addWidget(version)
+        bottom_row.addStretch()
+        footer_layout.addLayout(bottom_row)
         layout.addWidget(footer)
 
         # -- Custom item painting -------------------------------------
@@ -233,6 +259,16 @@ class Sidebar(QWidget):
 
     def current_index(self) -> int:
         return self._current_index
+
+    def _on_theme_toggle(self):
+        self._is_dark = not self._is_dark
+        self._theme_toggle_btn.setText("☀" if self._is_dark else "☾")
+        self.themeToggleRequested.emit()
+
+    def update_theme_toggle_icon(self, is_dark: bool):
+        """Update toggle icon to reflect current theme state."""
+        self._is_dark = is_dark
+        self._theme_toggle_btn.setText("☀" if is_dark else "☾")
 
     def set_hotkey_status(self, ok: bool):
         """Update the hotkey status indicator dot."""

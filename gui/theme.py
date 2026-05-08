@@ -19,65 +19,58 @@ from .styles import generate_all_styles
 _active_theme_name: str = "deep_purple_blue"
 _styles: dict = generate_all_styles(_active_theme_name)
 
-# -- Backward-compatible exports (module-level) ----------------------
-COLORS: ThemeColors = _styles["COLORS"]
-FONTS: ThemeFonts = _styles["FONTS"]
-MAIN_WINDOW_STYLE: str = _styles["MAIN_WINDOW_STYLE"]
-TEXT_EDIT_STYLE: str = _styles["TEXT_EDIT_STYLE"]
-LIST_WIDGET_STYLE: str = _styles["LIST_WIDGET_STYLE"]
-COMBO_BOX_STYLE: str = _styles["COMBO_BOX_STYLE"]
-PUSH_BUTTON_STYLE: str = _styles["PUSH_BUTTON_STYLE"]
-TAB_WIDGET_STYLE: str = _styles["TAB_WIDGET_STYLE"]
-SPIN_BOX_STYLE: str = _styles["SPIN_BOX_STYLE"]
-SPLITTER_STYLE: str = _styles["SPLITTER_STYLE"]
-PROGRESS_STYLE: str = _styles["PROGRESS_STYLE"]
-MESSAGE_BOX_STYLE: str = _styles["MESSAGE_BOX_STYLE"]
-FLOATING_STYLE: str = _styles["FLOATING_STYLE"]
-LINE_EDIT_STYLE: str = _styles["LINE_EDIT_STYLE"]
-TABLE_WIDGET_STYLE: str = _styles["TABLE_WIDGET_STYLE"]
-GROUP_BOX_STYLE: str = _styles["GROUP_BOX_STYLE"]
-SLIDER_STYLE: str = _styles["SLIDER_STYLE"]
-CHECK_BOX_STYLE: str = _styles["CHECK_BOX_STYLE"]
+# Export keys that map to _styles dict entries
+_STYLE_KEYS = [
+    "COLORS", "FONTS", "MAIN_WINDOW_STYLE", "TEXT_EDIT_STYLE",
+    "LIST_WIDGET_STYLE", "COMBO_BOX_STYLE", "PUSH_BUTTON_STYLE",
+    "TAB_WIDGET_STYLE", "SPIN_BOX_STYLE", "SPLITTER_STYLE",
+    "PROGRESS_STYLE", "MESSAGE_BOX_STYLE", "FLOATING_STYLE",
+    "LINE_EDIT_STYLE", "TABLE_WIDGET_STYLE", "GROUP_BOX_STYLE",
+    "SLIDER_STYLE", "CHECK_BOX_STYLE",
+]
+
+
+def _apply_style_exports(styles: dict):
+    """Set module-level attributes from a styles dict."""
+    for key in _STYLE_KEYS:
+        globals()[key] = styles[key]
+
+
+# Initialize module-level exports
+_apply_style_exports(_styles)
+
+# Backward-compatible aliases for type checkers
+COLORS: ThemeColors
+FONTS: ThemeFonts
+MAIN_WINDOW_STYLE: str
+TEXT_EDIT_STYLE: str
+LIST_WIDGET_STYLE: str
+COMBO_BOX_STYLE: str
+PUSH_BUTTON_STYLE: str
+TAB_WIDGET_STYLE: str
+SPIN_BOX_STYLE: str
+SPLITTER_STYLE: str
+PROGRESS_STYLE: str
+MESSAGE_BOX_STYLE: str
+FLOATING_STYLE: str
+LINE_EDIT_STYLE: str
+TABLE_WIDGET_STYLE: str
+GROUP_BOX_STYLE: str
+SLIDER_STYLE: str
+CHECK_BOX_STYLE: str
 
 
 def set_active_theme(name: str):
     """Switch the active theme and regenerate all exports."""
     global _active_theme_name, _styles
-    global COLORS, FONTS, MAIN_WINDOW_STYLE, TEXT_EDIT_STYLE
-    global LIST_WIDGET_STYLE, COMBO_BOX_STYLE, PUSH_BUTTON_STYLE
-    global TAB_WIDGET_STYLE, SPIN_BOX_STYLE, SPLITTER_STYLE
-    global PROGRESS_STYLE, MESSAGE_BOX_STYLE, FLOATING_STYLE
-    global LINE_EDIT_STYLE, TABLE_WIDGET_STYLE, GROUP_BOX_STYLE
-    global SLIDER_STYLE, CHECK_BOX_STYLE
-
     _active_theme_name = name
     _styles = generate_all_styles(name)
-
-    COLORS = _styles["COLORS"]
-    FONTS = _styles["FONTS"]
-    MAIN_WINDOW_STYLE = _styles["MAIN_WINDOW_STYLE"]
-    TEXT_EDIT_STYLE = _styles["TEXT_EDIT_STYLE"]
-    LIST_WIDGET_STYLE = _styles["LIST_WIDGET_STYLE"]
-    COMBO_BOX_STYLE = _styles["COMBO_BOX_STYLE"]
-    PUSH_BUTTON_STYLE = _styles["PUSH_BUTTON_STYLE"]
-    TAB_WIDGET_STYLE = _styles["TAB_WIDGET_STYLE"]
-    SPIN_BOX_STYLE = _styles["SPIN_BOX_STYLE"]
-    SPLITTER_STYLE = _styles["SPLITTER_STYLE"]
-    PROGRESS_STYLE = _styles["PROGRESS_STYLE"]
-    MESSAGE_BOX_STYLE = _styles["MESSAGE_BOX_STYLE"]
-    FLOATING_STYLE = _styles["FLOATING_STYLE"]
-    LINE_EDIT_STYLE = _styles["LINE_EDIT_STYLE"]
-    TABLE_WIDGET_STYLE = _styles["TABLE_WIDGET_STYLE"]
-    GROUP_BOX_STYLE = _styles["GROUP_BOX_STYLE"]
-    SLIDER_STYLE = _styles["SLIDER_STYLE"]
-    CHECK_BOX_STYLE = _styles["CHECK_BOX_STYLE"]
+    _apply_style_exports(_styles)
 
 
 def set_accent_color(hex_color: str):
     """Override accent_blue and accent_blue_hover for the active theme."""
-    from .colors import THEMES
     c = COLORS
-    # Build a new ThemeColors with the custom accent
     updated = ThemeColors(
         bg_base=c.bg_base, bg_surface=c.bg_surface,
         bg_elevated=c.bg_elevated, bg_hover=c.bg_hover,
@@ -94,7 +87,6 @@ def set_accent_color(hex_color: str):
         scroll_thumb=c.scroll_thumb, scroll_hover=c.scroll_hover,
         shadow_color=c.shadow_color,
     )
-    # Store updated colors in the current styles
     _styles["COLORS"] = updated
     _regenerate_from_colors(updated)
 
@@ -123,31 +115,28 @@ def _regenerate_from_colors(c: ThemeColors):
         generate_table_widget_style, generate_group_box_style,
         generate_slider_style, generate_check_box_style,
     )
-    global COLORS, FONTS, MAIN_WINDOW_STYLE, TEXT_EDIT_STYLE
-    global LIST_WIDGET_STYLE, COMBO_BOX_STYLE, PUSH_BUTTON_STYLE
-    global TAB_WIDGET_STYLE, SPIN_BOX_STYLE, SPLITTER_STYLE
-    global PROGRESS_STYLE, MESSAGE_BOX_STYLE, FLOATING_STYLE
-    global LINE_EDIT_STYLE, TABLE_WIDGET_STYLE, GROUP_BOX_STYLE
-    global SLIDER_STYLE, CHECK_BOX_STYLE
-
     f = FONTS
-    COLORS = c
-    MAIN_WINDOW_STYLE = generate_main_window_style(c, f)
-    TEXT_EDIT_STYLE = generate_text_edit_style(c, f)
-    LIST_WIDGET_STYLE = generate_list_widget_style(c, f)
-    COMBO_BOX_STYLE = generate_combo_box_style(c, f)
-    PUSH_BUTTON_STYLE = generate_push_button_style(c, f)
-    TAB_WIDGET_STYLE = generate_tab_widget_style(c, f)
-    SPIN_BOX_STYLE = generate_spin_box_style(c, f)
-    SPLITTER_STYLE = generate_splitter_style(c, f)
-    PROGRESS_STYLE = generate_progress_style(c, f)
-    MESSAGE_BOX_STYLE = generate_message_box_style(c, f)
-    FLOATING_STYLE = generate_floating_style(c, f)
-    LINE_EDIT_STYLE = generate_line_edit_style(c, f)
-    TABLE_WIDGET_STYLE = generate_table_widget_style(c, f)
-    GROUP_BOX_STYLE = generate_group_box_style(c, f)
-    SLIDER_STYLE = generate_slider_style(c, f)
-    CHECK_BOX_STYLE = generate_check_box_style(c, f)
+    styles = {
+        "COLORS": c,
+        "FONTS": f,
+        "MAIN_WINDOW_STYLE": generate_main_window_style(c, f),
+        "TEXT_EDIT_STYLE": generate_text_edit_style(c, f),
+        "LIST_WIDGET_STYLE": generate_list_widget_style(c, f),
+        "COMBO_BOX_STYLE": generate_combo_box_style(c, f),
+        "PUSH_BUTTON_STYLE": generate_push_button_style(c, f),
+        "TAB_WIDGET_STYLE": generate_tab_widget_style(c, f),
+        "SPIN_BOX_STYLE": generate_spin_box_style(c, f),
+        "SPLITTER_STYLE": generate_splitter_style(c, f),
+        "PROGRESS_STYLE": generate_progress_style(c, f),
+        "MESSAGE_BOX_STYLE": generate_message_box_style(c, f),
+        "FLOATING_STYLE": generate_floating_style(c, f),
+        "LINE_EDIT_STYLE": generate_line_edit_style(c, f),
+        "TABLE_WIDGET_STYLE": generate_table_widget_style(c, f),
+        "GROUP_BOX_STYLE": generate_group_box_style(c, f),
+        "SLIDER_STYLE": generate_slider_style(c, f),
+        "CHECK_BOX_STYLE": generate_check_box_style(c, f),
+    }
+    _apply_style_exports(styles)
 
 
 def get_active_theme_name() -> str:

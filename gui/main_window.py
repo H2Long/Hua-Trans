@@ -139,6 +139,7 @@ class MainWindow(QMainWindow):
 
         # -- Connect sidebar ------------------------------------------
         self._sidebar.currentChanged.connect(self._on_nav_changed)
+        self._sidebar.themeToggleRequested.connect(self._on_sidebar_theme_toggle)
 
         # -- Restore last page ----------------------------------------
         last_page = self.config.get("last_page", 0)
@@ -182,6 +183,15 @@ class MainWindow(QMainWindow):
         self._translation_page._source_edit.setPlainText(text)
         self._sidebar.set_current_index(0)
 
+    def _on_sidebar_theme_toggle(self):
+        """Quick-toggle between dark and light themes."""
+        from gui.theme import get_active_theme_name
+        current = get_active_theme_name()
+        new_theme = "minimal_apple" if current != "minimal_apple" else "deep_purple_blue"
+        self.config["theme"] = new_theme
+        save_config(self.config)
+        self._on_theme_changed(new_theme)
+
     def _on_theme_changed(self, theme_name: str):
         """Handle theme change from settings."""
         set_active_theme(theme_name)
@@ -194,6 +204,8 @@ class MainWindow(QMainWindow):
         self._settings_page.reapply_theme()
         # Reapply sidebar & separator styles
         self._sidebar.reapply_theme()
+        is_dark = theme_name != "minimal_apple"
+        self._sidebar.update_theme_toggle_icon(is_dark)
         c = new_c
         self._sidebar.setStyleSheet(f"QWidget {{ background: {c.bg_surface}; }}")
 
@@ -210,7 +222,12 @@ class MainWindow(QMainWindow):
         self.config["window_state"] = self.saveState().toHex().data().decode()
         self.config["last_page"] = self._sidebar.current_index()
         save_config(self.config)
-        super().closeEvent(event)
+        # Minimize to tray instead of quitting
+        if hasattr(self, '_tray') and self._tray.isVisible():
+            self.hide()
+            event.ignore()
+        else:
+            super().closeEvent(event)
 
     def set_page(self, index: int):
         self._sidebar.set_current_index(index)
