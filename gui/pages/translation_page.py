@@ -997,10 +997,23 @@ class TranslationPage(QWidget):
         if not self.pdf.doc:
             return
         if not self.ocr.is_available():
-            QMessageBox.warning(
-                self, "OCR 错误",
-                "未安装 Tesseract OCR。\n安装命令: sudo apt install tesseract-ocr"
-            )
+            if _sys.platform == "win32":
+                install_hint = (
+                    "未安装 Tesseract OCR。\n"
+                    "下载: https://github.com/UB-Mannheim/tesseract/wiki\n"
+                    "安装时请勾选中文语言包 (Chinese Simplified)"
+                )
+            elif _sys.platform == "darwin":
+                install_hint = (
+                    "未安装 Tesseract OCR。\n"
+                    "安装命令: brew install tesseract tesseract-lang"
+                )
+            else:
+                install_hint = (
+                    "未安装 Tesseract OCR。\n"
+                    "安装命令: sudo apt install tesseract-ocr"
+                )
+            QMessageBox.warning(self, "OCR 错误", install_hint)
             return
 
         progress = QProgressDialog("正在扫描页面...", "取消", 0, 0, self)

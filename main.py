@@ -82,9 +82,10 @@ def _load_app_icon():
 def main():
     import signal as _signal
 
-    # Enable input method support (for Chinese pinyin, etc.)
-    os.environ.setdefault("QT_IM_MODULE", "ibus")
-    os.environ.setdefault("XMODIFIERS", "@im=ibus")
+    # Enable input method support (Linux X11 only)
+    if sys.platform == "linux":
+        os.environ.setdefault("QT_IM_MODULE", "ibus")
+        os.environ.setdefault("XMODIFIERS", "@im=ibus")
 
     # Handle Ctrl+C gracefully
     _signal.signal(_signal.SIGINT, lambda *_: QApplication.quit())
