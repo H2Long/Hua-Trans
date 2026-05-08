@@ -1185,12 +1185,12 @@ class TranslationPage(QWidget):
         self.status_message.emit(
             f"原位翻译中... (0/{self._overlay_total})"
         )
-        # Launch initial batch of concurrent workers
-        # Staggered to avoid API rate limits and TLS contention
-        concurrent = min(3, self._overlay_total)
-        stagger_ms = self.config.get("overlay_stagger_ms", 500)
-        for i in range(concurrent):
-            QTimer.singleShot(i * stagger_ms, self._start_overlay_worker)
+        # Launch initial batch of concurrent workers all at once
+        concurrent = self.config.get("overlay_concurrent", 5)
+        if concurrent > self._overlay_total:
+            concurrent = self._overlay_total
+        for _ in range(concurrent):
+            self._start_overlay_worker()
 
     def _start_overlay_worker(self):
         """Start a worker for the next untranslated segment, if any."""
@@ -1237,7 +1237,7 @@ class TranslationPage(QWidget):
             worker.wait()
             self._overlay_workers.remove(worker)
         if not self._overlay_cancelled:
-            stagger_ms = self.config.get("overlay_stagger_ms", 500)
+            stagger_ms = self.config.get("overlay_stagger_ms", 50)
             QTimer.singleShot(stagger_ms, self._start_overlay_worker)
         self._check_overlay_done()
 
@@ -1258,7 +1258,7 @@ class TranslationPage(QWidget):
             worker.wait()
             self._overlay_workers.remove(worker)
         if not self._overlay_cancelled:
-            stagger_ms = self.config.get("overlay_stagger_ms", 500)
+            stagger_ms = self.config.get("overlay_stagger_ms", 50)
             QTimer.singleShot(stagger_ms, self._start_overlay_worker)
         self._check_overlay_done()
 

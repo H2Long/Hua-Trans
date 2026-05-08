@@ -40,7 +40,8 @@ DEFAULT_CONFIG = {
     "popup_mini_mode": False,
     "popup_position": None,  # {"x": int, "y": int}, set when user drags the popup
     "auto_hide_seconds": 0,  # 0 = never auto-hide, stay until manually closed
-    "overlay_stagger_ms": 500,  # ms between concurrent overlay translation requests
+    "overlay_stagger_ms": 50,  # ms between follow-up overlay translation requests
+    "overlay_concurrent": 5,  # max simultaneous overlay translation workers
     "cache_enabled": True,
     "cache_max_days": 30,
     "terminology_highlight": True,
