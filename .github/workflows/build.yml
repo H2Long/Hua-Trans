@@ -57,7 +57,7 @@ jobs:
           mkdir -p $APPDIR/usr/bin
           cp dist/hua-trans $APPDIR/usr/bin/
 
-          # Desktop entry
+          # Desktop entry (inside AppImage)
           cat > $APPDIR/hua-trans.desktop << 'DESKTOPEOF'
           [Desktop Entry]
           Name=黄花梨之译
@@ -69,10 +69,27 @@ jobs:
           Terminal=false
           Type=Application
           Categories=Development;Education;Engineering;
+          StartupWMClass=hua-trans
           DESKTOPEOF
 
           # Icon
           cp resources/icon.png $APPDIR/hua-trans.png 2>/dev/null || true
+
+          # Standalone .desktop file for users to install manually
+          # Uses env var APPIMAGE so it works wherever the user puts the file
+          cat > hua-trans.desktop << 'DESKTOPEOF'
+          [Desktop Entry]
+          Name=黄花梨之译
+          Name[en]=Hua-Trans
+          Comment=电子工程数据手册 PDF 翻译工具
+          Comment[en]=EE Datasheet PDF Translation Tool
+          Exec=env APPIMAGE=/path/to/Hua-Trans-x86_64.AppImage /path/to/Hua-Trans-x86_64.AppImage
+          Icon=hua-trans
+          Terminal=false
+          Type=Application
+          Categories=Development;Education;Engineering;
+          StartupWMClass=hua-trans
+          DESKTOPEOF
 
           # AppRun launcher
           cat > $APPDIR/AppRun << 'APPRUNEOF'
@@ -94,6 +111,12 @@ jobs:
         with:
           name: Hua-Trans-x86_64.AppImage
           path: Hua-Trans-x86_64.AppImage
+
+      - name: Upload desktop file
+        uses: actions/upload-artifact@v4
+        with:
+          name: hua-trans.desktop
+          path: hua-trans.desktop
 
   # ── Windows build ────────────────────────────────────────────────────
   windows:
@@ -153,6 +176,10 @@ jobs:
         with:
           name: hua-trans-windows
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: hua-trans.desktop
+
       - name: Set AppImage as executable
         run: chmod +x Hua-Trans-x86_64.AppImage
 
@@ -162,6 +189,7 @@ jobs:
           files: |
             Hua-Trans-x86_64.AppImage
             hua-trans-windows.exe
+            hua-trans.desktop
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
