@@ -93,6 +93,11 @@ def main():
     # Load config
     config = load_config()
 
+    # Initialize logging
+    from core.logging_setup import get_logger
+    log = get_logger()
+    log.info("Hua-Trans starting on %s", sys.platform)
+
     # Apply theme
     set_active_theme(config.get("theme", "dark_professional"))
 

@@ -17,7 +17,9 @@ class PDFHandler:
             self.doc = fitz.open(file_path)
             self.file_path = file_path
             return True
-        except Exception:
+        except Exception as e:
+            from .logging_setup import get_logger
+            get_logger().warning("Failed to open PDF '%s': %s", file_path, e)
             self.doc = None
             return False
 

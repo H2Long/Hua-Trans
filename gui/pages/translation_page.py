@@ -1091,8 +1091,9 @@ class TranslationPage(QWidget):
             win = self.window()
             if hasattr(win, '_usage_tracker') and not result.get("from_cache"):
                 win._usage_tracker.record(result["engine"], len(original))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.logging_setup import get_logger
+            get_logger().debug("Usage tracking skipped: %s", e)
 
         cache_info = " [缓存]" if result.get("from_cache") else ""
         self.status_message.emit(f"翻译完成 // {result['engine']}{cache_info}")

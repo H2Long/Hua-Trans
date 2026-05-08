@@ -4,5 +4,6 @@ pytesseract>=0.3.10
 pyperclip>=1.8.2
 Pillow>=10.0.0
 requests>=2.31.0
+keyring>=23.0
 python-xlib>=0.33; sys_platform == 'linux'
 pynput>=1.7; sys_platform == 'win32'

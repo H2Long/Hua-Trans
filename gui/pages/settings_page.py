@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QGroupBox,
     QLabel, QPushButton, QLineEdit, QComboBox, QSpinBox,
     QSlider, QCheckBox, QScrollArea, QMessageBox, QFrame,
-    QColorDialog,
+    QColorDialog, QFileDialog,
 )
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent
 from PyQt5.QtGui import QKeyEvent, QColor
@@ -14,7 +14,7 @@ from gui.theme import (
     SPIN_BOX_STYLE, LINE_EDIT_STYLE, GROUP_BOX_STYLE,
     SLIDER_STYLE, CHECK_BOX_STYLE,
 )
-from core.config import save_config
+from core.config import save_config, store_api_key, delete_api_key
 from core.hotkey_manager import validate_hotkey
 
 
@@ -467,6 +467,24 @@ class SettingsPage(QWidget):
         term_group.setLayout(term_form)
         layout.addWidget(term_group)
 
+        # -- Diagnostics -----------------------------------------------
+        diag_group = self._create_group("诊断")
+        diag_layout = QHBoxLayout()
+        diag_layout.setSpacing(12)
+
+        diag_label = QLabel("导出应用日志用于问题排查")
+        diag_label.setStyleSheet(f"color: {c.text_secondary}; font-family: {FONTS.body}; font-size: {FONTS.size_sm}px;")
+        diag_layout.addWidget(diag_label)
+        diag_layout.addStretch()
+
+        export_log_btn = QPushButton("导出诊断日志")
+        export_log_btn.setStyleSheet(PUSH_BUTTON_STYLE)
+        export_log_btn.clicked.connect(self._export_diagnostics)
+        diag_layout.addWidget(export_log_btn)
+
+        diag_group.setLayout(diag_layout)
+        layout.addWidget(diag_group)
+
         # -- Action buttons --------------------------------------------
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(14)
@@ -577,10 +595,42 @@ class SettingsPage(QWidget):
             self.config["theme"] = new_theme
             self.theme_changed.emit(new_theme)
 
+        # Persist API keys to OS keychain
+        deepl_key = self._deepl_key.text().strip()
+        llm_key = self._llm_key.text().strip()
+        if deepl_key:
+            store_api_key("deepl_api_key", deepl_key)
+        else:
+            delete_api_key("deepl_api_key")
+        if llm_key:
+            store_api_key("llm_api_key", llm_key)
+        else:
+            delete_api_key("llm_api_key")
+
         save_config(self.config)
         self.translator.reload_engines()
 
         QMessageBox.information(self, "保存成功", "设置已保存")
+
+    def _export_diagnostics(self):
+        """Export application log to a user-chosen file."""
+        path, _ = QFileDialog.getSaveFileName(
+            self, "导出诊断日志", "hua-trans-diagnostics.txt",
+            "Text Files (*.txt);;All Files (*)",
+        )
+        if not path:
+            return
+        try:
+            from core.logging_setup import export_diagnostics, get_log_path
+            log_content = export_diagnostics()
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(f"Hua-Trans Diagnostic Report\n")
+                f.write(f"{'=' * 50}\n")
+                f.write(f"Log file: {get_log_path()}\n\n")
+                f.write(log_content)
+            QMessageBox.information(self, "导出成功", f"诊断日志已保存到: {path}")
+        except Exception as e:
+            QMessageBox.warning(self, "导出失败", str(e))
 
     def _clear_cache(self):
         reply = QMessageBox.question(

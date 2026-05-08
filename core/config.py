@@ -1,8 +1,26 @@
-"""Configuration management for TranslateTor."""
+"""Configuration management for TranslateTor.
+
+API keys (deepl_api_key, llm_api_key) are stored in the OS keychain
+via keyring. Plaintext keys in config.json are migrated on first load.
+"""
 
 import json
 import os
+import sys
 from pathlib import Path
+
+try:
+    import keyring as _keyring
+    _KEYRING_AVAILABLE = True
+except ImportError:
+    _KEYRING_AVAILABLE = False
+
+_KEYRING_SERVICE = "hua-trans"
+_KEYRING_KEYS = {
+    "deepl_api_key": "deepl_api_key",
+    "llm_api_key": "llm_api_key",
+}
+_SENSITIVE_KEYS = frozenset(_KEYRING_KEYS.keys())
 
 DEFAULT_CONFIG = {
     "hotkey": "ctrl+shift+t",
@@ -44,23 +62,91 @@ def ensure_dirs():
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _migrate_keys_to_keyring(config: dict):
+    """Move plaintext API keys from config dict into OS keychain."""
+    if not _KEYRING_AVAILABLE:
+        return
+    dirty = False
+    for key_name in _SENSITIVE_KEYS:
+        value = config.get(key_name, "")
+        if value:
+            try:
+                _keyring.set_password(_KEYRING_SERVICE, key_name, value)
+                config[key_name] = ""
+                dirty = True
+            except Exception:
+                pass  # Keyring may fail on headless systems; keep plaintext
+    if dirty:
+        save_config(config)
+
+
 def load_config() -> dict:
-    """Load configuration from file, creating defaults if needed."""
+    """Load configuration from file, creating defaults if needed.
+
+    API keys are loaded from keyring and injected into the config dict.
+    Plaintext keys in config.json are migrated to keyring on first load.
+    """
     ensure_dirs()
+    config = DEFAULT_CONFIG.copy()
     if CONFIG_FILE.exists():
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 saved = json.load(f)
-            config = DEFAULT_CONFIG.copy()
             config.update(saved)
-            return config
         except (json.JSONDecodeError, IOError):
             pass
-    return DEFAULT_CONFIG.copy()
+
+    # Migrate plaintext keys → keyring
+    _migrate_keys_to_keyring(config)
+
+    # Inject keys from keyring into config dict
+    if _KEYRING_AVAILABLE:
+        for key_name in _SENSITIVE_KEYS:
+            try:
+                value = _keyring.get_password(_KEYRING_SERVICE, key_name)
+                if value:
+                    config[key_name] = value
+            except Exception:
+                pass
+
+    return config
 
 
 def save_config(config: dict):
-    """Save configuration to file."""
+    """Save configuration to file, stripping sensitive keys."""
     ensure_dirs()
+    safe = {k: v for k, v in config.items() if k not in _SENSITIVE_KEYS}
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
+        json.dump(safe, f, indent=2, ensure_ascii=False)
+
+
+def store_api_key(key_name: str, value: str):
+    """Store an API key in the OS keychain."""
+    if not _KEYRING_AVAILABLE:
+        return False
+    try:
+        _keyring.set_password(_KEYRING_SERVICE, key_name, value)
+        return True
+    except Exception:
+        return False
+
+
+def delete_api_key(key_name: str):
+    """Delete an API key from the OS keychain."""
+    if not _KEYRING_AVAILABLE:
+        return False
+    try:
+        _keyring.delete_password(_KEYRING_SERVICE, key_name)
+        return True
+    except Exception:
+        return False
+
+
+def get_api_key(key_name: str) -> str:
+    """Read an API key from the OS keychain."""
+    if not _KEYRING_AVAILABLE:
+        return ""
+    try:
+        return _keyring.get_password(_KEYRING_SERVICE, key_name) or ""
+    except Exception:
+        return ""

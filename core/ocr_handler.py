@@ -24,7 +24,9 @@ class OCRHandler:
         try:
             pytesseract.get_tesseract_version()
             return True
-        except Exception:
+        except Exception as e:
+            from .logging_setup import get_logger
+            get_logger().debug("Tesseract not available: %s", e)
             return False
 
     def ocr_image_bytes(self, image_bytes: bytes) -> str:
