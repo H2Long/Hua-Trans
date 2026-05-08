@@ -17,34 +17,50 @@
 
 | 要求 | Linux | Windows |
 |------|-------|---------|
-| 操作系统 | X11 (Wayland 需 XWayland) | Windows 10+ |
-| Python | 3.10+ | 3.10+ |
-| 热键依赖 | python-xlib (XGrabKey) | pynput |
-| 中文字体 | fonts-wqy-microhei | Microsoft YaHei (系统自带) |
+| 操作系统 | X11 (Wayland 需 XWayland) | Windows 10/11 |
+| 中文字体 | fonts-wqy-microhei (可选) | Microsoft YaHei (系统自带) |
 | 可选 | Tesseract OCR | Tesseract OCR |
+
+> **不需要安装 Python** — 直接下载可执行文件即可运行。
 
 ## 快速安装
 
-### Linux
+### 方式一：下载可执行文件（推荐 · 无需 Python）
+
+从 [GitHub Releases](https://github.com/H2Long/Hua-Trans/releases) 下载最新版本：
+
+| 平台 | 文件 | 说明 |
+|------|------|------|
+| 🪟 Windows 10/11 | `hua-trans-windows.exe` | 双击运行，首次启动如有防火墙弹窗点允许 |
+| 🐧 Linux | `hua-trans-linux` | 下载后赋予执行权限即可 |
+
+**Linux 额外步骤：**
 
 ```bash
-# 一键安装（推荐）
-curl -fsSL https://raw.githubusercontent.com/H2Long/Hua-Trans/main/install.sh | bash
+chmod +x hua-trans-linux
 
-# 或手动安装
-git clone git@github.com:H2Long/Hua-Trans.git
-cd Hua-Trans
-pip install -r requirements.txt
-sudo apt install fonts-wqy-microhei   # 原位翻译中文字体
+# 可选：安装中文字体（原位翻译覆绘需要）
+sudo apt install fonts-wqy-microhei
+
+# 运行
+./hua-trans-linux
+```
+
+**Windows 额外步骤：**
+
+下载 `.exe` 文件，双击运行。首次启动如有 SmartScreen 提示，点击「更多信息」→「仍要运行」。
+
+### 方式二：一键安装脚本（需要 Python）
+
+**Linux：**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/H2Long/Hua-Trans/main/install.sh | bash
 ```
 
 安装后终端输入 `hua-trans` 启动，或在应用菜单搜索「黄花梨之译」。
 
-### Windows
-
-**方式一：一键安装脚本（推荐）**
-
-在 PowerShell 中运行（右键 → 以管理员身份运行，非必须但推荐）：
+**Windows（PowerShell）：**
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
@@ -52,23 +68,9 @@ iwr -Uri "https://raw.githubusercontent.com/H2Long/Hua-Trans/main/install.ps1" -
 & "$env:TEMP\install.ps1"
 ```
 
-脚本会自动：检测 Python → 安装依赖 → 创建开始菜单快捷方式 → 可选安装 Tesseract OCR。
+脚本会自动：检测 Python → 安装依赖 → 创建开始菜单快捷方式。
 
-**方式二：手动安装**
-
-```powershell
-# 克隆仓库
-git clone https://github.com/H2Long/Hua-Trans.git
-cd Hua-Trans
-
-# 安装依赖
-pip install -r requirements.txt
-
-# 启动
-python main.py
-```
-
-### macOS（实验性）
+### 方式三：从源码运行（开发者）
 
 ```bash
 git clone https://github.com/H2Long/Hua-Trans.git
@@ -76,8 +78,6 @@ cd Hua-Trans
 pip install -r requirements.txt
 python main.py
 ```
-
-> macOS 热键功能需要 `pynput` 辅助功能权限。手动安装：`pip install pynput`。
 
 ## 使用
 
