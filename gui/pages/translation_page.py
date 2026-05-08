@@ -1266,6 +1266,9 @@ class TranslationPage(QWidget):
         """Check if all overlay workers have finished, then finalize or cancel."""
         if self._overlay_active > 0:
             return
+        # Guard: don't finalize if there are still untranslated segments pending
+        if any(t is None for t in self._overlay_translations):
+            return
         if self._overlay_cancelled:
             QApplication.restoreOverrideCursor()
             self.status_message.emit("原位翻译已取消")
@@ -1290,10 +1293,10 @@ class TranslationPage(QWidget):
                 if is_cjk or not text.strip():
                     recombined.append(text)
                 else:
+                    translated = None
                     if en_idx < len(self._overlay_translations):
-                        recombined.append(self._overlay_translations[en_idx])
-                    else:
-                        recombined.append(text)
+                        translated = self._overlay_translations[en_idx]
+                    recombined.append(translated if translated else text)
                     en_idx += 1
             block_no = self._overlay_valid[bi]["block_no"]
             trans_map[block_no] = "".join(recombined)
