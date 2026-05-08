@@ -2,7 +2,7 @@
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
-    QLabel, QFrame, QStyledItemDelegate, QStyle,
+    QLabel, QFrame, QPushButton, QStyledItemDelegate, QStyle,
 )
 from PyQt5.QtCore import Qt, pyqtSignal, QSize
 from PyQt5.QtGui import QFont, QColor, QIcon, QPainter, QPixmap, QPen, QPalette
